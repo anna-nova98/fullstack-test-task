@@ -1,7 +1,10 @@
 import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncGenerator
 
 from celery import Celery
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import CELERY_BROKER_URL, STORAGE_DIR
 from src.core.database import async_session_maker
@@ -10,14 +13,24 @@ from src.models import Alert, StoredFile
 celery_app = Celery("file_tasks", broker=CELERY_BROKER_URL, backend=CELERY_BROKER_URL)
 
 
-async def _scan_file_for_threats(file_id: str) -> None:
-    async with async_session_maker() as session:
-        file_item = await session.get(StoredFile, file_id)
+@asynccontextmanager
+async def _get_session(session: AsyncSession | None) -> AsyncGenerator[AsyncSession, None]:
+    """Use provided session (for tests) or create a new one."""
+    if session is not None:
+        yield session
+    else:
+        async with async_session_maker() as s:
+            yield s
+
+
+async def _scan_file_for_threats(file_id: str, session: AsyncSession | None = None) -> None:
+    async with _get_session(session) as s:
+        file_item = await s.get(StoredFile, file_id)
         if not file_item:
             return
 
         file_item.processing_status = "processing"
-        await session.commit()
+        await s.commit()
 
         reasons: list[str] = []
         extension = Path(file_item.original_name).suffix.lower()
@@ -34,14 +47,14 @@ async def _scan_file_for_threats(file_id: str) -> None:
         file_item.scan_status = "suspicious" if reasons else "clean"
         file_item.scan_details = ", ".join(reasons) if reasons else "no threats found"
         file_item.requires_attention = bool(reasons)
-        await session.commit()
+        await s.commit()
 
     extract_file_metadata.delay(file_id)
 
 
-async def _extract_file_metadata(file_id: str) -> None:
-    async with async_session_maker() as session:
-        file_item = await session.get(StoredFile, file_id)
+async def _extract_file_metadata(file_id: str, session: AsyncSession | None = None) -> None:
+    async with _get_session(session) as s:
+        file_item = await s.get(StoredFile, file_id)
         if not file_item:
             return
 
@@ -50,7 +63,7 @@ async def _extract_file_metadata(file_id: str) -> None:
             file_item.processing_status = "failed"
             file_item.scan_status = file_item.scan_status or "failed"
             file_item.scan_details = "stored file not found during metadata extraction"
-            await session.commit()
+            await s.commit()
             send_file_alert.delay(file_id)
             return
 
@@ -70,14 +83,14 @@ async def _extract_file_metadata(file_id: str) -> None:
 
         file_item.metadata_json = metadata
         file_item.processing_status = "processed"
-        await session.commit()
+        await s.commit()
 
     send_file_alert.delay(file_id)
 
 
-async def _send_file_alert(file_id: str) -> None:
-    async with async_session_maker() as session:
-        file_item = await session.get(StoredFile, file_id)
+async def _send_file_alert(file_id: str, session: AsyncSession | None = None) -> None:
+    async with _get_session(session) as s:
+        file_item = await s.get(StoredFile, file_id)
         if not file_item:
             return
 
@@ -92,8 +105,8 @@ async def _send_file_alert(file_id: str) -> None:
         else:
             alert = Alert(file_id=file_id, level="info", message="File processed successfully")
 
-        session.add(alert)
-        await session.commit()
+        s.add(alert)
+        await s.commit()
 
 
 @celery_app.task
