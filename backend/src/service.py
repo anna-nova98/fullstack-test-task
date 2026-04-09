@@ -12,7 +12,6 @@ from src.models import Alert, StoredFile
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STORAGE_DIR = BASE_DIR / "storage" / "files"
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 DB_URL = (
     f"postgresql+asyncpg://{os.environ.get('POSTGRES_USER')}:"
     f"{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}:"
@@ -47,6 +46,7 @@ async def create_file(title: str, upload_file: UploadFile) -> StoredFile:
     if not content:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is empty")
 
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     file_id = str(uuid4())
     suffix = Path(upload_file.filename or "").suffix
     stored_name = f"{file_id}{suffix}"
