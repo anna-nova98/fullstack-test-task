@@ -1,15 +1,13 @@
 import asyncio
-import os
 from pathlib import Path
 
 from celery import Celery
 
+from src.core.config import CELERY_BROKER_URL, STORAGE_DIR
+from src.core.database import async_session_maker
 from src.models import Alert, StoredFile
-from src.service import STORAGE_DIR, DB_URL, async_session_maker
 
-REDIS_URL = os.environ.get("CELERY_BROKER_URL", "redis://backend-redis:6379/0")
-
-celery_app = Celery("file_tasks", broker=REDIS_URL, backend=REDIS_URL)
+celery_app = Celery("file_tasks", broker=CELERY_BROKER_URL, backend=CELERY_BROKER_URL)
 
 
 async def _scan_file_for_threats(file_id: str) -> None:
@@ -19,7 +17,7 @@ async def _scan_file_for_threats(file_id: str) -> None:
             return
 
         file_item.processing_status = "processing"
-        await session.commit()  # persist "processing" status immediately
+        await session.commit()
 
         reasons: list[str] = []
         extension = Path(file_item.original_name).suffix.lower()
@@ -56,7 +54,7 @@ async def _extract_file_metadata(file_id: str) -> None:
             send_file_alert.delay(file_id)
             return
 
-        metadata = {
+        metadata: dict = {
             "extension": Path(file_item.original_name).suffix.lower(),
             "size_bytes": file_item.size,
             "mime_type": file_item.mime_type,
@@ -67,8 +65,8 @@ async def _extract_file_metadata(file_id: str) -> None:
             metadata["line_count"] = len(content.splitlines())
             metadata["char_count"] = len(content)
         elif file_item.mime_type == "application/pdf":
-            content = stored_path.read_bytes()
-            metadata["approx_page_count"] = max(content.count(b"/Type /Page"), 1)
+            raw = stored_path.read_bytes()
+            metadata["approx_page_count"] = max(raw.count(b"/Type /Page"), 1)
 
         file_item.metadata_json = metadata
         file_item.processing_status = "processed"
