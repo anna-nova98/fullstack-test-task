@@ -8,6 +8,8 @@ WORKDIR /backend
 
 COPY pyproject.toml uv.lock ./
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-RUN uv sync --locked
+RUN uv sync
 
 COPY src ./src
+COPY alembic.ini ./
+COPY migrations ./migrations
