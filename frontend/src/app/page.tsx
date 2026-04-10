@@ -26,40 +26,53 @@ export default function Page() {
   }
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px 48px" }}>
+    <div className="page-wrap">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="app-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
           <div>
             <h1>Управление файлами</h1>
-            <p>Загрузка файлов, просмотр статусов обработки и ленты алертов.</p>
+            <p>Загрузка, сканирование и мониторинг файлов в реальном времени</p>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              className="btn-refresh"
-              onClick={() => { void files.load(); void alerts.load(); }}
-            >
+          <div className="header-actions">
+            <button className="btn-refresh" onClick={() => { void files.load(); void alerts.load(); }}>
               ↻ Обновить
             </button>
             <button className="btn-upload" onClick={() => setShowModal(true)}>
-              + Добавить файл
+              + Загрузить файл
             </button>
           </div>
         </div>
       </div>
 
-      {globalError && (
-        <div className="pill pill-danger" style={{ marginBottom: 20, borderRadius: 8, padding: "10px 16px", fontSize: ".875rem" }}>
-          {globalError}
+      {/* ── Stats ── */}
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-icon stat-icon-files">📁</div>
+          <div>
+            <div className="stat-value">{files.data?.total ?? "—"}</div>
+            <div className="stat-label">Файлов загружено</div>
+          </div>
         </div>
+        <div className="stat-card">
+          <div className="stat-icon stat-icon-alerts">🔔</div>
+          <div>
+            <div className="stat-value">{alerts.data?.total ?? "—"}</div>
+            <div className="stat-label">Алертов создано</div>
+          </div>
+        </div>
+      </div>
+
+      {globalError && (
+        <div className="error-banner">⚠ {globalError}</div>
       )}
 
-      {/* Files */}
+      {/* ── Files ── */}
       <div className="app-card">
         <div className="app-card-header">
           <h2>📁 Файлы</h2>
-          <span className="count-badge">{files.data?.total ?? 0}</span>
+          <span className="count-badge">{files.data?.total ?? 0} записей</span>
         </div>
         <FilesTable
           data={files.data}
@@ -70,11 +83,11 @@ export default function Page() {
         />
       </div>
 
-      {/* Alerts */}
+      {/* ── Alerts ── */}
       <div className="app-card">
         <div className="app-card-header">
           <h2>🔔 Алерты</h2>
-          <span className="count-badge">{alerts.data?.total ?? 0}</span>
+          <span className="count-badge">{alerts.data?.total ?? 0} записей</span>
         </div>
         <AlertsTable
           data={alerts.data}

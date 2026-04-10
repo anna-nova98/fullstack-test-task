@@ -55,23 +55,21 @@ export function UploadModal({ show, onHide, onUploaded }: Props) {
               {error}
             </div>
           )}
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: ".875rem", fontWeight: 500, marginBottom: 6 }}>Название</label>
+          <div style={{ marginBottom: 18 }}>
+            <label className="form-label-custom">Название</label>
             <input
               className="form-control"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Например, Договор с подрядчиком"
-              style={{ width: "100%" }}
             />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: ".875rem", fontWeight: 500, marginBottom: 6 }}>Файл</label>
+            <label className="form-label-custom">Файл</label>
             <input
               className="form-control"
               type="file"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              style={{ width: "100%" }}
             />
           </div>
         </div>
