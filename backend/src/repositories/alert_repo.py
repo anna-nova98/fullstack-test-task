@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Alert
@@ -15,8 +15,8 @@ async def get_all(session: AsyncSession, offset: int = 0, limit: int = 20) -> li
 
 
 async def count_all(session: AsyncSession) -> int:
-    result = await session.execute(select(Alert))
-    return len(result.scalars().all())
+    result = await session.execute(select(func.count()).select_from(Alert))
+    return result.scalar_one()
 
 
 async def save(session: AsyncSession, alert: Alert) -> Alert:

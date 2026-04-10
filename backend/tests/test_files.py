@@ -98,3 +98,42 @@ async def test_delete_file(client: AsyncClient):
 async def test_delete_file_not_found(client: AsyncClient):
     resp = await client.delete("/files/nonexistent-id")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_download_file_not_found_record(client: AsyncClient):
+    resp = await client.get("/files/nonexistent-id/download")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_download_file_missing_on_disk(client: AsyncClient, tmp_path, monkeypatch):
+    """File record exists but the stored file has been deleted from disk."""
+    import io
+    from src.core import config as cfg
+
+    # point STORAGE_DIR to tmp_path so the uploaded file lands there
+    monkeypatch.setattr(cfg, "STORAGE_DIR", tmp_path)
+
+    # patch service module too (it imports STORAGE_DIR at module level)
+    import src.services.file_service as fs
+    monkeypatch.setattr(fs, "STORAGE_DIR", tmp_path)
+
+    import src.routers.files as rf
+    monkeypatch.setattr(rf, "STORAGE_DIR", tmp_path)
+
+    resp = await client.post(
+        "/files",
+        data={"title": "disk test"},
+        files={"file": ("disk.txt", io.BytesIO(b"content"), "text/plain")},
+    )
+    assert resp.status_code == 201
+    file_id = resp.json()["id"]
+
+    # delete the actual file from disk
+    stored_name = resp.json()["original_name"]
+    for f in tmp_path.iterdir():
+        f.unlink()
+
+    resp = await client.get(f"/files/{file_id}/download")
+    assert resp.status_code == 404

@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import StoredFile
@@ -15,8 +15,8 @@ async def get_all(session: AsyncSession, offset: int = 0, limit: int = 20) -> li
 
 
 async def count_all(session: AsyncSession) -> int:
-    result = await session.execute(select(StoredFile))
-    return len(result.scalars().all())
+    result = await session.execute(select(func.count()).select_from(StoredFile))
+    return result.scalar_one()
 
 
 async def get_by_id(session: AsyncSession, file_id: str) -> StoredFile | None:

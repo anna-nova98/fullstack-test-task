@@ -1,8 +1,7 @@
 import { Badge, Button, Spinner, Table } from "react-bootstrap";
 import type { FileItem, PagedResponse } from "@/types";
 import { Pagination } from "./Pagination";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { API_BASE } from "@/api/client";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));

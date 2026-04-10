@@ -10,7 +10,7 @@ export function useAlerts() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (pageIndex: number = page) => {
+  const load = useCallback(async (pageIndex: number = 0) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -22,7 +22,7 @@ export function useAlerts() {
     } finally {
       setIsLoading(false);
     }
-  }, [page]);
+  }, []);
 
   return { data, page, isLoading, error, load, pageSize: PAGE_SIZE };
 }
