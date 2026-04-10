@@ -6,8 +6,10 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import STORAGE_DIR
-from src.models import StoredFile
+from src.models import ProcessingStatus, StoredFile
 from src.repositories import file_repo
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 async def list_files(session: AsyncSession, offset: int, limit: int) -> tuple[list[StoredFile], int]:
@@ -27,6 +29,8 @@ async def create_file(session: AsyncSession, title: str, upload_file: UploadFile
     content = await upload_file.read()
     if not content:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="File is empty")
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File exceeds 10 MB limit")
 
     STORAGE_DIR.mkdir(parents=True, exist_ok=True)
     file_id = str(uuid4())
@@ -46,7 +50,7 @@ async def create_file(session: AsyncSession, title: str, upload_file: UploadFile
             or "application/octet-stream"
         ),
         size=len(content),
-        processing_status="uploaded",
+        processing_status=ProcessingStatus.uploaded,
     )
     return await file_repo.save(session, file_item)
 

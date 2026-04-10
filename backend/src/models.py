@@ -1,7 +1,27 @@
 from datetime import datetime
+from enum import Enum as PyEnum
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class ProcessingStatus(str, PyEnum):
+    uploaded   = "uploaded"
+    processing = "processing"
+    processed  = "processed"
+    failed     = "failed"
+
+
+class ScanStatus(str, PyEnum):
+    clean      = "clean"
+    suspicious = "suspicious"
+    failed     = "failed"
+
+
+class AlertLevel(str, PyEnum):
+    info     = "info"
+    warning  = "warning"
+    critical = "critical"
 
 
 class Base(DeclarativeBase):
@@ -10,6 +30,9 @@ class Base(DeclarativeBase):
 
 class StoredFile(Base):
     __tablename__ = "files"
+    __table_args__ = (
+        Index("ix_files_created_at", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -17,7 +40,7 @@ class StoredFile(Base):
     stored_name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     mime_type: Mapped[str] = mapped_column(String(255), nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
-    processing_status: Mapped[str] = mapped_column(String(50), nullable=False, default="uploaded")
+    processing_status: Mapped[str] = mapped_column(String(50), nullable=False, default=ProcessingStatus.uploaded)
     scan_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     scan_details: Mapped[str | None] = mapped_column(String(500), nullable=True)
     metadata_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -37,6 +60,10 @@ class StoredFile(Base):
 
 class Alert(Base):
     __tablename__ = "alerts"
+    __table_args__ = (
+        Index("ix_alerts_file_id", "file_id"),
+        Index("ix_alerts_created_at", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     file_id: Mapped[str] = mapped_column(String(36), ForeignKey("files.id"), nullable=False)

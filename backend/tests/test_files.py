@@ -137,3 +137,14 @@ async def test_download_file_missing_on_disk(client: AsyncClient, tmp_path, monk
 
     resp = await client.get(f"/files/{file_id}/download")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_file_too_large_returns_413(client: AsyncClient):
+    big_content = b"x" * (10 * 1024 * 1024 + 1)
+    response = await client.post(
+        "/files",
+        data={"title": "Too big"},
+        files={"file": ("big.bin", big_content, "application/octet-stream")},
+    )
+    assert response.status_code == 413

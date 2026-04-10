@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncConnection
 
 from src.app import app
 from src.core.database import get_session
@@ -21,10 +21,13 @@ async def engine():
 
 @pytest_asyncio.fixture
 async def session(engine) -> AsyncSession:
-    _session_maker = async_sessionmaker(engine, expire_on_commit=False)
-    async with _session_maker() as s:
-        yield s
-        await s.rollback()
+    """Each test gets its own transaction that is rolled back on teardown."""
+    async with engine.connect() as conn:
+        await conn.begin()
+        _maker = async_sessionmaker(bind=conn, expire_on_commit=False, join_transaction_mode="create_savepoint")
+        async with _maker() as s:
+            yield s
+        await conn.rollback()
 
 
 @pytest_asyncio.fixture

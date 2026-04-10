@@ -1,22 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFiles } from "@/hooks/useFiles";
 import { useAlerts } from "@/hooks/useAlerts";
 import { FilesTable } from "@/components/FilesTable";
 import { AlertsTable } from "@/components/AlertsTable";
 import { UploadModal } from "@/components/UploadModal";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function Page() {
   const files = useFiles();
   const alerts = useAlerts();
   const [showModal, setShowModal] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     void files.load(0);
     void alerts.load(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // poll every 4s while any file is still processing
+  useEffect(() => {
+    const hasProcessing = files.data?.items.some(
+      (f) => f.processing_status === "uploaded" || f.processing_status === "processing"
+    );
+    if (hasProcessing && !pollRef.current) {
+      pollRef.current = setInterval(() => {
+        void files.load(files.page);
+        void alerts.load(alerts.page);
+      }, 4000);
+    } else if (!hasProcessing && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    };
+  }, [files, alerts]);
 
   const globalError = files.error ?? alerts.error;
 
@@ -26,6 +47,7 @@ export default function Page() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="page-wrap">
 
       {/* ── Header ── */}
@@ -104,5 +126,6 @@ export default function Page() {
         onUploaded={handleUploaded}
       />
     </div>
+    </ErrorBoundary>
   );
 }
