@@ -27,7 +27,7 @@ services:
         condition: service_started
 
   backend-db:
-    image: postgres:latest
+    image: postgres:16
     container_name: backend-db
     ports:
       - "5433:5432"

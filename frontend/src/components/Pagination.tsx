@@ -1,5 +1,3 @@
-import { Button } from "react-bootstrap";
-
 type Props = {
   page: number;
   total: number;
@@ -12,26 +10,10 @@ export function Pagination({ page, total, pageSize, onPageChange }: Props) {
   if (totalPages <= 1) return null;
 
   return (
-    <div className="d-flex align-items-center gap-2 mt-3">
-      <Button
-        variant="outline-secondary"
-        size="sm"
-        disabled={page === 0}
-        onClick={() => onPageChange(page - 1)}
-      >
-        ←
-      </Button>
-      <span className="small text-secondary">
-        {page + 1} / {totalPages}
-      </span>
-      <Button
-        variant="outline-secondary"
-        size="sm"
-        disabled={page >= totalPages - 1}
-        onClick={() => onPageChange(page + 1)}
-      >
-        →
-      </Button>
+    <div className="pagination-bar">
+      <button disabled={page === 0} onClick={() => onPageChange(page - 1)}>‹</button>
+      <span>{page + 1} / {totalPages}</span>
+      <button disabled={page >= totalPages - 1} onClick={() => onPageChange(page + 1)}>›</button>
     </div>
   );
 }

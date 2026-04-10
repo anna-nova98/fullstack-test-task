@@ -4,10 +4,9 @@ from pathlib import Path
 from typing import AsyncGenerator
 
 from celery import Celery
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from src.core.config import CELERY_BROKER_URL, STORAGE_DIR
-from src.core.database import async_session_maker
+from src.core.config import CELERY_BROKER_URL, DB_URL, STORAGE_DIR
 from src.models import Alert, StoredFile
 
 celery_app = Celery("file_tasks", broker=CELERY_BROKER_URL, backend=CELERY_BROKER_URL)
@@ -15,12 +14,18 @@ celery_app = Celery("file_tasks", broker=CELERY_BROKER_URL, backend=CELERY_BROKE
 
 @asynccontextmanager
 async def _get_session(session: AsyncSession | None) -> AsyncGenerator[AsyncSession, None]:
-    """Use provided session (for tests) or create a new one."""
+    """Use provided session (for tests) or create a fresh engine+session for worker tasks."""
     if session is not None:
         yield session
     else:
-        async with async_session_maker() as s:
-            yield s
+        # Create a new engine per asyncio.run() call to avoid asyncpg event loop conflicts
+        engine = create_async_engine(DB_URL)
+        maker = async_sessionmaker(engine, expire_on_commit=False)
+        try:
+            async with maker() as s:
+                yield s
+        finally:
+            await engine.dispose()
 
 
 async def _scan_file_for_threats(file_id: str, session: AsyncSession | None = None) -> None:

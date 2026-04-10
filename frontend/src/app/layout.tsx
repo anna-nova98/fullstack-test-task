@@ -1,29 +1,23 @@
 import type { Metadata } from "next";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container } from "react-bootstrap";
+import './globals.css';
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: 'Тестовое задание Fullstack',
-    description: 'Тестовое задание Fullstack',
+    title: 'Управление файлами',
+    description: 'Файлообменник с проверкой на угрозы',
   };
 }
 
 export default async function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang='ru'>
+    <html lang="ru">
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body>
-        <Container fluid className='p-0'>
-            {children}
-        </Container>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

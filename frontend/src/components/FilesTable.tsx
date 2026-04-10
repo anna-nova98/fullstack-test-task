@@ -1,4 +1,4 @@
-import { Badge, Button, Spinner, Table } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import type { FileItem, PagedResponse } from "@/types";
 import { Pagination } from "./Pagination";
 import { API_BASE } from "@/api/client";
@@ -13,11 +13,18 @@ function formatSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function getProcessingVariant(status: string) {
-  if (status === "failed") return "danger";
-  if (status === "processing") return "warning";
-  if (status === "processed") return "success";
-  return "secondary";
+function statusPill(status: string) {
+  if (status === "failed")    return <span className="pill pill-danger">{status}</span>;
+  if (status === "processing") return <span className="pill pill-warning">{status}</span>;
+  if (status === "processed")  return <span className="pill pill-success">{status}</span>;
+  return <span className="pill pill-secondary">{status}</span>;
+}
+
+function scanPill(file: FileItem) {
+  const label = file.scan_status ?? "pending";
+  if (!file.scan_status)          return <span className="pill pill-secondary">{label}</span>;
+  if (file.requires_attention)    return <span className="pill pill-warning">{label}</span>;
+  return <span className="pill pill-success">{label}</span>;
 }
 
 type Props = {
@@ -32,13 +39,11 @@ export function FilesTable({ data, isLoading, page, pageSize, onPageChange }: Pr
   return (
     <>
       {isLoading ? (
-        <div className="d-flex justify-content-center py-5">
-          <Spinner animation="border" />
-        </div>
+        <div className="spinner-wrap"><Spinner animation="border" style={{ color: "var(--brand)" }} /></div>
       ) : (
-        <div className="table-responsive">
-          <Table hover bordered className="align-middle mb-0">
-            <thead className="table-light">
+        <div style={{ overflowX: "auto" }}>
+          <table className="app-table">
+            <thead>
               <tr>
                 <th>Название</th>
                 <th>Файл</th>
@@ -52,60 +57,42 @@ export function FilesTable({ data, isLoading, page, pageSize, onPageChange }: Pr
             </thead>
             <tbody>
               {!data || data.items.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-4 text-secondary">
-                    Файлы пока не загружены
-                  </td>
-                </tr>
+                <tr className="empty-row"><td colSpan={8}>Файлы пока не загружены</td></tr>
               ) : (
                 data.items.map((file) => (
                   <tr key={file.id}>
                     <td>
-                      <div className="fw-semibold">{file.title}</div>
-                      <div className="small text-secondary">{file.id}</div>
+                      <div className="cell-title">{file.title}</div>
+                      <div className="cell-sub">{file.id}</div>
                     </td>
                     <td>{file.original_name}</td>
-                    <td>{file.mime_type}</td>
-                    <td>{formatSize(file.size)}</td>
+                    <td style={{ color: "var(--text-muted)", fontSize: ".8rem" }}>{file.mime_type}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{formatSize(file.size)}</td>
+                    <td>{statusPill(file.processing_status)}</td>
                     <td>
-                      <Badge bg={getProcessingVariant(file.processing_status)}>
-                        {file.processing_status}
-                      </Badge>
-                    </td>
-                    <td>
-                      <div className="d-flex flex-column gap-1">
-                        <Badge bg={file.requires_attention ? "warning" : "success"}>
-                          {file.scan_status ?? "pending"}
-                        </Badge>
-                        <span className="small text-secondary">
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        {scanPill(file)}
+                        <span style={{ fontSize: ".72rem", color: "var(--text-muted)" }}>
                           {file.scan_details ?? "Ожидает обработки"}
                         </span>
                       </div>
                     </td>
-                    <td>{formatDate(file.created_at)}</td>
-                    <td className="text-nowrap">
-                      <a
-                        href={`${API_BASE}/files/${file.id}/download`}
-                        className="btn btn-outline-primary btn-sm"
-                      >
-                        Скачать
+                    <td style={{ whiteSpace: "nowrap", color: "var(--text-muted)", fontSize: ".8rem" }}>
+                      {formatDate(file.created_at)}
+                    </td>
+                    <td>
+                      <a href={`${API_BASE}/files/${file.id}/download`} className="btn-dl">
+                        ↓ Скачать
                       </a>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </Table>
+          </table>
         </div>
       )}
-      {data && (
-        <Pagination
-          page={page}
-          total={data.total}
-          pageSize={pageSize}
-          onPageChange={onPageChange}
-        />
-      )}
+      <Pagination page={page} total={data?.total ?? 0} pageSize={pageSize} onPageChange={onPageChange} />
     </>
   );
 }
